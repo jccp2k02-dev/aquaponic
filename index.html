@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(rgb(249, 248, 246));
+            background: linear-gradient(135deg, #2D4059 0%, #1a2942 100%);
             min-height: 100vh;
             padding: 20px;
             display: flex;
@@ -218,6 +218,16 @@
             transform: scale(0.98);
         }
 
+        .ctrl-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .ctrl-btn:disabled:hover {
+            transform: none !important;
+        }
+
         .slider-container {
             margin-top: 24px;
         }
@@ -271,6 +281,19 @@
             cursor: pointer;
             border: none;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        input[type="range"]:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        input[type="range"]:disabled::-webkit-slider-thumb {
+            cursor: not-allowed;
+        }
+
+        input[type="range"]:disabled::-moz-range-thumb {
+            cursor: not-allowed;
         }
 
         .threshold-card {
@@ -354,6 +377,22 @@
 
         .apply-btn:active {
             transform: scale(0.98);
+        }
+
+        .apply-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .apply-btn:disabled:hover {
+            transform: none !important;
+        }
+
+        .input-wrapper input:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #f5f5f5;
         }
 
         .section-divider {
@@ -467,7 +506,7 @@
                 <div class="slider-container">
                     <div class="slider-label">
                         <span>Brightness</span>
-                        <span class="slider-value" id="lightValue">10%</span>
+                        <span class="slider-value" id="lightValue">80%</span>
                     </div>
                     <input type="range" min="0" max="100" value="80" id="lightSlider" oninput="updateSlider('light', this.value)">
                 </div>
@@ -536,6 +575,8 @@
             waterOut: false,
             aquarium: false
         };
+
+        let isAutoMode = false;
 
         // MQTT Configuration
         const brokerUrl = 'wss://broker.emqx.io:8084/mqtt';
@@ -665,19 +706,68 @@
             const currentMode = document.getElementById('currentMode');
 
             if (mode === 'manual') {
+                isAutoMode = false;
                 manualBtn.classList.add('active');
                 autoBtn.classList.remove('active');
                 currentMode.textContent = 'Manual';
                 publishMQTT('aqua/esp32/sw00', 'false');
+                enableAllControls();
             } else {
+                isAutoMode = true;
                 autoBtn.classList.add('active');
                 manualBtn.classList.remove('active');
                 currentMode.textContent = 'Auto';
                 publishMQTT('aqua/esp32/sw00', 'true');
+                disableAllControls();
             }
         }
 
+        function enableAllControls() {
+            // Enable all control buttons
+            const allButtons = document.querySelectorAll('.ctrl-btn');
+            allButtons.forEach(btn => {
+                btn.disabled = false;
+            });
+
+            // Enable slider
+            document.getElementById('lightSlider').disabled = false;
+
+            // Enable threshold inputs and apply buttons
+            document.getElementById('waterLowThreshold').disabled = false;
+            document.getElementById('waterHighThreshold').disabled = false;
+            document.getElementById('phLowThreshold').disabled = false;
+            document.getElementById('phHighThreshold').disabled = false;
+            document.querySelectorAll('.apply-btn').forEach(btn => {
+                btn.disabled = false;
+            });
+        }
+
+        function disableAllControls() {
+            // Disable all control buttons
+            const allButtons = document.querySelectorAll('.ctrl-btn');
+            allButtons.forEach(btn => {
+                btn.disabled = true;
+            });
+
+            // Disable slider
+            document.getElementById('lightSlider').disabled = true;
+
+            // Disable threshold inputs and apply buttons
+            document.getElementById('waterLowThreshold').disabled = true;
+            document.getElementById('waterHighThreshold').disabled = true;
+            document.getElementById('phLowThreshold').disabled = true;
+            document.getElementById('phHighThreshold').disabled = true;
+            document.querySelectorAll('.apply-btn').forEach(btn => {
+                btn.disabled = true;
+            });
+        }
+
         function toggleControl(device, state) {
+            // Prevent control in auto mode
+            if (isAutoMode) {
+                return;
+            }
+
             states[device] = state;
             const dot = document.getElementById(device + 'Dot');
             const status = document.getElementById(device + 'Status');
@@ -714,6 +804,11 @@
         }
 
         function updateSlider(device, value) {
+            // Prevent slider update in auto mode
+            if (isAutoMode) {
+                return;
+            }
+
             document.getElementById(device + 'Value').textContent = value + '%';
             
             // Send brightness value to MQTT
@@ -724,6 +819,11 @@
 
         // Apply Water Level Thresholds
         function applyWaterThresholds() {
+            // Prevent changes in auto mode
+            if (isAutoMode) {
+                return;
+            }
+
             const lowValue = document.getElementById('waterLowThreshold').value;
             const highValue = document.getElementById('waterHighThreshold').value;
 
@@ -741,6 +841,11 @@
 
         // Apply pH Thresholds
         function applyPhThresholds() {
+            // Prevent changes in auto mode
+            if (isAutoMode) {
+                return;
+            }
+
             const lowValue = document.getElementById('phLowThreshold').value;
             const highValue = document.getElementById('phHighThreshold').value;
 
@@ -763,6 +868,4 @@
         });
     </script>
 </body>
-
 </html>
-
